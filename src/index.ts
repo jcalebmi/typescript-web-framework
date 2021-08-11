@@ -1,8 +1,7 @@
 import { User } from "./models/User";
+import axios from 'axios';
+
+const user = new User({name: 'new record', age: 0});
 
 
-const user = new User({name: 'caleb', age: 30});
-
-console.log(user.get('name'));
-console.log(user.get('age'));
 
