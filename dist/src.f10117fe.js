@@ -2026,57 +2026,30 @@ var Attributes = function () {
 }();
 
 exports.Attributes = Attributes;
-},{}],"src/models/User.ts":[function(require,module,exports) {
+},{}],"src/models/Model.ts":[function(require,module,exports) {
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
-exports.User = void 0;
+exports.Model = void 0;
 
-var Eventing_1 = require("./Eventing");
-
-var Sync_1 = require("./Sync");
-
-var Attributes_1 = require("./Attributes");
-
-var rootUrl = 'http://localhost:3004/users';
-
-var User = function () {
-  function User(attrs) {
-    this.events = new Eventing_1.Eventing();
-    this.sync = new Sync_1.Sync(rootUrl);
-    this.attributes = new Attributes_1.Attributes(attrs);
+var Model = function () {
+  function Model(attributes, events, sync) {
+    this.attributes = attributes;
+    this.events = events;
+    this.sync = sync;
+    this.on = this.events.on;
+    this.trigger = this.events.trigger;
+    this.get = this.attributes.get;
   }
 
-  Object.defineProperty(User.prototype, "on", {
-    get: function get() {
-      return this.events.on;
-    },
-    enumerable: false,
-    configurable: true
-  });
-  Object.defineProperty(User.prototype, "trigger", {
-    get: function get() {
-      return this.events.trigger;
-    },
-    enumerable: false,
-    configurable: true
-  });
-  Object.defineProperty(User.prototype, "get", {
-    get: function get() {
-      return this.attributes.get;
-    },
-    enumerable: false,
-    configurable: true
-  });
-
-  User.prototype.set = function (update) {
+  Model.prototype.set = function (update) {
     this.attributes.set(update);
     this.events.trigger('change');
   };
 
-  User.prototype.fetch = function () {
+  Model.prototype.fetch = function () {
     var _this = this;
 
     var id = this.get('id');
@@ -2090,7 +2063,7 @@ var User = function () {
     });
   };
 
-  User.prototype.save = function () {
+  Model.prototype.save = function () {
     var _this = this;
 
     this.sync.save(this.attributes.getAll()).then(function (response) {
@@ -2100,11 +2073,137 @@ var User = function () {
     });
   };
 
-  return User;
+  return Model;
 }();
 
+exports.Model = Model;
+},{}],"src/models/Collection.ts":[function(require,module,exports) {
+"use strict";
+
+var __importDefault = this && this.__importDefault || function (mod) {
+  return mod && mod.__esModule ? mod : {
+    "default": mod
+  };
+};
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+exports.Collection = void 0;
+
+var Eventing_1 = require("./Eventing");
+
+var axios_1 = __importDefault(require("axios"));
+
+var Collection = function () {
+  function Collection(rootUrl, deserialize) {
+    this.rootUrl = rootUrl;
+    this.deserialize = deserialize;
+    this.models = [];
+    this.events = new Eventing_1.Eventing();
+  }
+
+  Object.defineProperty(Collection.prototype, "on", {
+    get: function get() {
+      return this.events.on;
+    },
+    enumerable: false,
+    configurable: true
+  });
+  Object.defineProperty(Collection.prototype, "trigger", {
+    get: function get() {
+      return this.events.trigger;
+    },
+    enumerable: false,
+    configurable: true
+  });
+
+  Collection.prototype.fetch = function () {
+    var _this = this;
+
+    axios_1.default.get(this.rootUrl).then(function (response) {
+      response.data.forEach(function (value) {
+        _this.models.push(_this.deserialize(value));
+
+        _this.trigger('change');
+      });
+    });
+  };
+
+  return Collection;
+}();
+
+exports.Collection = Collection;
+},{"./Eventing":"src/models/Eventing.ts","axios":"node_modules/axios/index.js"}],"src/models/User.ts":[function(require,module,exports) {
+"use strict";
+
+var __extends = this && this.__extends || function () {
+  var _extendStatics = function extendStatics(d, b) {
+    _extendStatics = Object.setPrototypeOf || {
+      __proto__: []
+    } instanceof Array && function (d, b) {
+      d.__proto__ = b;
+    } || function (d, b) {
+      for (var p in b) {
+        if (Object.prototype.hasOwnProperty.call(b, p)) d[p] = b[p];
+      }
+    };
+
+    return _extendStatics(d, b);
+  };
+
+  return function (d, b) {
+    if (typeof b !== "function" && b !== null) throw new TypeError("Class extends value " + String(b) + " is not a constructor or null");
+
+    _extendStatics(d, b);
+
+    function __() {
+      this.constructor = d;
+    }
+
+    d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
+  };
+}();
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+exports.User = void 0;
+
+var Eventing_1 = require("./Eventing");
+
+var Sync_1 = require("./Sync");
+
+var Attributes_1 = require("./Attributes");
+
+var Model_1 = require("./Model");
+
+var Collection_1 = require("./Collection");
+
+var rootUrl = 'http://localhost:3004/users';
+
+var User = function (_super) {
+  __extends(User, _super);
+
+  function User() {
+    return _super !== null && _super.apply(this, arguments) || this;
+  }
+
+  User.buildUser = function (attrs) {
+    return new User(new Attributes_1.Attributes(attrs), new Eventing_1.Eventing(), new Sync_1.Sync(rootUrl));
+  };
+
+  User.buildUserCollection = function () {
+    return new Collection_1.Collection(rootUrl, function (json) {
+      return User.buildUser(json);
+    });
+  };
+
+  return User;
+}(Model_1.Model);
+
 exports.User = User;
-},{"./Eventing":"src/models/Eventing.ts","./Sync":"src/models/Sync.ts","./Attributes":"src/models/Attributes.ts"}],"src/index.ts":[function(require,module,exports) {
+},{"./Eventing":"src/models/Eventing.ts","./Sync":"src/models/Sync.ts","./Attributes":"src/models/Attributes.ts","./Model":"src/models/Model.ts","./Collection":"src/models/Collection.ts"}],"src/index.ts":[function(require,module,exports) {
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -2113,15 +2212,11 @@ Object.defineProperty(exports, "__esModule", {
 
 var User_1 = require("./models/User");
 
-var user = new User_1.User({
-  id: 1,
-  name: 'newer',
-  age: 0
+var collection = User_1.User.buildUserCollection();
+collection.on('change', function () {
+  console.log(collection);
 });
-user.on('save', function () {
-  console.log(user);
-});
-user.save();
+collection.fetch();
 },{"./models/User":"src/models/User.ts"}],"../../../../usr/local/lib/node_modules/parcel-bundler/src/builtins/hmr-runtime.js":[function(require,module,exports) {
 var global = arguments[3];
 var OVERLAY_ID = '__parcel__error__overlay__';
